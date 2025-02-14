@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es-ES">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App de Horarios de Oración - Sant Hilari Sacalm</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2em;
+            color: #4CAF50;
+        }
+        .header p {
+            font-size: 1.2em;
+            color: #888;
+        }
+        .current-time {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+        }
+        .prayer-times, .important-dates {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .prayer-times h2, .important-dates h2 {
+            margin-top: 0;
+            font-size: 1.5em;
+            color: #4CAF50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        td {
+            background-color: #f9f9f9;
+        }
+        .important-dates ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .important-dates li {
+            padding: 10px;
+            background-color: #f1f1f1;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .important-dates li span {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .footer {
+            text-align: center;
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 30px;
+        }
+        .footer a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Horarios de Oración - Sant Hilari Sacalm</h1>
+        <p>Consulta los horarios de oración y las fechas importantes del calendario islámico.</p>
+        <div id="current-time" class="current-time"></div> <!-- Hora actual -->
+    </div>
+
+    <div class="prayer-times">
+        <h2>Horarios de Oración para hoy</h2>
+        <table id="prayerTable">
+            <thead>
+                <tr>
+                    <th>Oración</th>
+                    <th>Hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Fajr</td>
+                    <td id="fajr"></td>
+                </tr>
+                <tr>
+                    <td>Dhuhr</td>
+                    <td id="dhuhr"></td>
+                </tr>
+                <tr>
+                    <td>Asr</td>
+                    <td id="asr"></td>
+                </tr>
+                <tr>
+                    <td>Maghrib</td>
+                    <td id="maghrib"></td>
+                </tr>
+                <tr>
+                    <td>Isha</td>
+                    <td id="isha"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="important-dates">
+        <h2>Fechas Importantes</h2>
+        <ul>
+            <li><span>Ramadán:</span> 14 de marzo - 13 de abril 2025</li>
+            <li><span>Eid al-Fitr:</span> 15 de abril 2025</li>
+            <li><span>Eid al-Adha:</span> 14 de junio 2025</li>
+            <li><span>La Meca (Hajj):</span> 26 de junio - 1 de julio 2025</li>
+        </ul>
+    </div>
+
+    <!-- Sonido "tadin" para la oración -->
+    <audio id="azan-sound" src="tadin.mp3" preload="auto"></audio>
+
+    <script>
+        // Función para actualizar la hora actual
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('current-time').innerText = `Hora actual: ${hours}:${minutes}:${seconds}`;
+        }
+
+        // Actualiza la hora cada segundo
+        setInterval(updateTime, 1000);
+
+        // Ejemplo de API para obtener los horarios de oración
+        const apiUrl = 'https://api.aladhan.com/v1/timingsByCity?city=Sant%20Hilari%20Sacalm&country=Spain&method=2'; // API ejemplo
+
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                const timings = data.data.timings;
+
+                // Actualizar la tabla con los horarios de oración
+                document.getElementById('fajr').innerText = timings.Fajr;
+                document.getElementById('dhuhr').innerText = timings.Dhuhr;
+                document.getElementById('asr').innerText = timings.Asr;
+                document.getElementById('maghrib').innerText = timings.Maghrib;
+                document.getElementById('isha').innerText = timings.Isha;
+
+                // Llamar a la función que verifica la hora y reproduce el sonido
+                checkPrayerTime(timings);
+            })
+            .catch(error => {
+                console.error('Error al obtener los horarios de oración:', error);
+            });
+
+        // Función para convertir la hora de oración a minutos desde medianoche
+        function convertToMinutes(timeString) {
+            const [hour, minute] = timeString.split(':');
+            return parseInt(hour) * 60 + parseInt(minute);
+        }
+
+        // Función para comprobar si es la hora de la oración
+        function checkPrayerTime(timings) {
+            setInterval(() => {
+                const now = new Date();
+                const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutos desde medianoche
+
+                // Comparar la hora actual con las horas de oración
+                if (currentTime === convertToMinutes(timings.Fajr)) {
+                    document.getElementById('azan-sound').play();
+                }
+                if (currentTime === convertToMinutes(timings.Dhuhr)) {
+                    document.getElementById('azan-sound').play();
+                }
+                if (currentTime === convertToMinutes(timings.Asr)) {
+                    document.getElementById('azan-sound').play();
+                }
+                if (currentTime === convertToMinutes(timings.Maghrib)) {
+                    document.getElementById('azan-sound').play();
+                }
+                if (currentTime === convertToMinutes(timings.Isha)) {
+                    document.getElementById('azan-sound').play();
+                }
+            }, 60000); // Comprobar cada minuto
+        }
+    </script>
+
+    <div class="footer">
+        <p>&copy; 2025 Horarios de Oración. Todos los derechos reservados. <a href="#">Más información</a></p>
+    </div>
+</body>
+</html>
